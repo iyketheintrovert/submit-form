@@ -5,8 +5,9 @@ const path = require('path');
 const cors = require('cors')
 
 const app = express();
-const PORT = 5500;
+const PORT = 3000;
 
+app.use(express.static('../frontend'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
@@ -21,19 +22,18 @@ const validationRules = [
 
 const databasePath = path.join(__dirname, 'database.json');
 
-app.post('/submit', validationRules, (req, res) => {
+app.post('/submit', validationRules, async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({ errors: errors.array() });
     }
 
     const { firstName, lastName, email, phoneNumber, gender} = req.body;
-
     const formData = { firstName, lastName, email, phoneNumber, gender};
 
-    fs.readFile(databasePath, (err, data) => {
+    fs.readFile(databasePath, 'utf8', (err, data) => {
         if (err && err.code !== 'ENOENT') {
-            return console.error('Error reading file:', err);
+            return res.status(500).json({ message: 'Error reading database.' });
         }
 
         let database = [];
@@ -42,14 +42,13 @@ app.post('/submit', validationRules, (req, res) => {
         }
         database.push(formData)
 
-        fs.writeFile(databasePath, JSON.stringify(database, null, 2), (err) => {
+        fs.writeFile(databasePath, JSON.stringify(database, null, 2), 'utf8', (err) => {
             if (err) {
-                return console.error('Error writing file:', err);
+                return res.status(500).send({ message: 'Error writing to database.' });
             }
-            console.log('Form data saved to database,json');
+            res.json({ message: 'Form data saved to database' });
         });
     });
-    res.send('Form submitted successfully!');
 });
 
 app.listen(PORT, () => {
